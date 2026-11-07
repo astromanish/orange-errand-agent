@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Errand Agent 🍊 — Side-by-Side Chat & Live Trace</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #f97316;
+      --accent-dim: rgba(249, 115, 22, 0.15);
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --blue: #58a6ff;
+      --mono: "JetBrains Mono", "Fira Code", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 10px 18px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .badge.green { background: rgba(63,185,80,0.15); color: var(--green); border-color: var(--green); }
+    .badge.yellow { background: rgba(210,153,34,0.15); color: var(--yellow); border-color: var(--yellow); }
+    .badge.red { background: rgba(248,81,73,0.15); color: var(--red); border-color: var(--red); }
+    .main-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 48% 52%;
+      overflow: hidden;
+    }
+    .pane {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+    .toolbar {
+      padding: 10px 14px;
+      background: #11161d;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .toolbar-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+    button {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+    button.primary:hover { opacity: 0.9; color: #000; }
+    button.active-fault { border-color: var(--yellow); background: rgba(210,153,34,0.2); color: var(--yellow); }
+    #chatLog {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .msg {
+      max-width: 88%;
+      padding: 10px 13px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: #1f2937;
+      border: 1px solid #374151;
+    }
+    .msg.assistant {
+      align-self: flex-start;
+      background: var(--panel);
+      border: 1px solid var(--border);
+    }
+    .chat-input-bar {
+      padding: 10px 14px;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+    .chat-input-bar input {
+      flex: 1;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13.5px;
+    }
+    .sub-cards {
+      padding: 10px 14px;
+      background: #11161d;
+      border-top: 1px solid var(--border);
+      max-height: 175px;
+      overflow-y: auto;
+      font-size: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .card h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    #traceLog {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+    }
+    .trace-item {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .trace-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .trace-body {
+      color: #c9d1d9;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 190px;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+    .state-strip {
+      padding: 8px 14px;
+      background: #11161d;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11.5px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>
+      <span>🍊 Errand Agent</span>
+      <span class="badge" id="phaseBadge">PHASE: IDLE</span>
+      <span class="badge green" id="budgetBadge">CONTEXT: 0 / 420 tok (55 seeded mems)</span>
+    </h1>
+    <div style="display:flex; gap:8px;">
+      <button onclick="triggerProactiveCancel()">⚡ Simulate Provider Cancel</button>
+      <button onclick="resetDemo()">↺ Reset Session</button>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- LEFT PANE: Chat & Controls -->
+    <div class="pane">
+      <div class="toolbar">
+        <span class="toolbar-label">Quick Prompts:</span>
+        <button onclick="sendQuick('Find a plumber for my kitchen tap this week, mornings only, under ₹1,500.')">1. Find Plumber (≤₹1500)</button>
+        <button onclick="sendQuick('Actually make it not before 10 a.m. and under ₹1,000.')">2. Edit: ≥10am & ≤₹1000</button>
+        <button onclick="sendQuick('Yes, confirm')">3. ✅ Confirm Action</button>
+        <button onclick="sendQuick('Book the same electrician as last time, but not before 10 a.m.')">4. Same Electrician</button>
+        <button onclick="sendQuick('What do you remember about my preferences?')">5. Inspect Memories</button>
+      </div>
+      <div class="toolbar">
+        <span class="toolbar-label">Live Fault Injection:</span>
+        <button id="btnOutcomeSuccess" class="active-fault" onclick="setFaultOutcome('success')">Book: Normal Success</button>
+        <button id="btnOutcomeTimeout" onclick="setFaultOutcome('timeout_booked')">Book: Timeout-After-Success</button>
+        <button id="btnOutcomeSlotTaken" onclick="setFaultOutcome('slot_taken')">Book: Slot Taken</button>
+        <button onclick="injectPriceMutation()">💸 Mutate Hold Price (+₹300)</button>
+      </div>
+
+      <div id="chatLog">
+        <div class="msg assistant">Hello! I'm your local Errand Agent. I have 55 seeded memories loaded under a strict 420-token context cap (forgotten & unconfirmed inferred facts are stripped). Try a prompt above or inject a live fault!</div>
+      </div>
+
+      <div class="chat-input-bar">
+        <input id="chatInput" type="text" placeholder="Ask to book a plumber, reschedule AC servicing, or manage memories..." onkeydown="if(event.key==='Enter') sendChat()" />
+        <button class="primary" onclick="sendChat()">Send</button>
+      </div>
+
+      <div class="sub-cards">
+        <div class="card">
+          <h3>Bookings (<span id="bkCount">0</span>)</h3>
+          <div id="bookingsList" style="font-family:var(--mono); font-size:11px; line-height:1.45;"></div>
+        </div>
+        <div class="card">
+          <h3>Code Approval Gate & Memory Stats</h3>
+          <div id="approvalAndMemBox" style="font-family:var(--mono); font-size:11px; line-height:1.45;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANE: Side-by-Side Live Observability Trace -->
+    <div class="pane" style="border-right:none;">
+      <div class="state-strip" id="stateStrip">
+        State: service=— | area=— | slot=— | hold=— | quoted=—
+      </div>
+      <div id="traceLog"></div>
+    </div>
+  </div>
+
+  <script>
+    function esc(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function api(path, body) {
+      const opts = body ? { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) } : {};
+      const r = await fetch(path, opts);
+      return await r.json();
+    }
+
+    function appendChat(role, text) {
+      const log = document.getElementById('chatLog');
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = text;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function renderSnapshot(snap, lastTurn) {
+      if (!snap) return;
+      const st = snap.state || {};
+      const phaseEl = document.getElementById('phaseBadge');
+      phaseEl.textContent = 'PHASE: ' + (st.phase || 'IDLE');
+      phaseEl.className = 'badge ' + (st.phase === 'BOOKED' ? 'green' : st.phase === 'AWAITING_APPROVAL' ? 'yellow' : '');
+
+      if (lastTurn && lastTurn.context_manifest) {
+        const cm = lastTurn.context_manifest;
+        document.getElementById('budgetBadge').textContent =
+          `CONTEXT: ${cm.total_tokens_used} / ${cm.token_budget} tok (incl=${cm.included_memory_keys.length}, forgotten_excl=${cm.excluded_forgotten_keys.length}, unconf_excl=${cm.excluded_unconfirmed_inferred_keys.length})`;
+      }
+
+      document.getElementById('stateStrip').textContent =
+        `Intent=${st.intent || '—'} | Service=${st.service || '—'} | Area=${st.area || '—'} | Provider=${st.selected_provider_id || '—'} | Slot=${st.selected_slot || '—'} | Hold=${st.active_hold_id || '—'} | Price=${st.quoted_price ? '₹'+st.quoted_price : '—'}`;
+
+      // Update fault buttons
+      const mode = (snap.fault_config || {}).force_book_outcome;
+      document.getElementById('btnOutcomeSuccess').className = mode === 'success' ? 'active-fault' : '';
+      document.getElementById('btnOutcomeTimeout').className = mode === 'timeout_booked' ? 'active-fault' : '';
+      document.getElementById('btnOutcomeSlotTaken').className = mode === 'slot_taken' ? 'active-fault' : '';
+
+      // Bookings
+      const bks = snap.bookings || [];
+      document.getElementById('bkCount').textContent = bks.length;
+      document.getElementById('bookingsList').innerHTML = bks.map(b =>
+        `<div>• <b>${esc(b.booking_id)}</b> [${esc(b.status)}] ${esc(b.provider_name)} @ ${esc(b.slot)} (₹${esc(b.price)})</div>`
+      ).join('') || '<span style="color:var(--muted)">No bookings</span>';
+
+      // Approvals & Memories
+      const ms = snap.memories_summary || {};
+      const ap = (snap.approvals || [])[0];
+      const apHtml = ap
+        ? `<div><b>Latest Approval:</b> ${esc(ap.action)} | fp=${esc(ap.fingerprint.slice(0,10))}… | consumed=${!!ap.consumed} | invalid=${!!ap.invalidated}</div>`
+        : `<div><b>Latest Approval:</b> none granted yet</div>`;
+      const memHtml = `<div style="margin-top:4px;"><b>Memories:</b> ${esc(ms.total)} total (${esc(ms.active_confirmed)} confirmed, ${esc(ms.unconfirmed_inferred)} unconfirmed-excluded, ${esc(ms.forgotten)} forgotten-excluded)</div>`;
+      document.getElementById('approvalAndMemBox').innerHTML = apHtml + memHtml;
+
+      // Traces
+      const traces = snap.traces || [];
+      const traceLog = document.getElementById('traceLog');
+      traceLog.innerHTML = traces.map(t => {
+        let color = 'var(--blue)';
+        if (t.event_type === 'tool_call') color = 'var(--accent)';
+        if (t.event_type === 'context_manifest') color = 'var(--green)';
+        if (t.event_type === 'proactive_notification') color = 'var(--yellow)';
+        return `<div class="trace-item">
+          <div class="trace-header">
+            <span style="color:${color}">[Turn #${esc(t.turn_index)}] ${esc(t.event_type.toUpperCase())}</span>
+            <span style="color:var(--muted)">${esc(t.trace_id)}</span>
+          </div>
+          <div class="trace-body">${esc(JSON.stringify(t.payload, null, 2))}</div>
+        </div>`;
+      }).join('');
+      traceLog.scrollTop = traceLog.scrollHeight;
+    }
+
+    async function sendChat() {
+      const inp = document.getElementById('chatInput');
+      const text = inp.value.trim();
+      if (!text) return;
+      inp.value = '';
+      appendChat('user', text);
+      const res = await api('/api/chat', { message: text });
+      if (res.turn) {
+        appendChat('assistant', res.turn.reply);
+      }
+      renderSnapshot(res.snapshot, res.turn);
+    }
+
+    function sendQuick(text) {
+      document.getElementById('chatInput').value = text;
+      sendChat();
+    }
+
+    async function setFaultOutcome(mode) {
+      const res = await api('/api/faults', { force_book_outcome: mode });
+      renderSnapshot(res.snapshot);
+    }
+
+    async function injectPriceMutation() {
+      const res = await api('/api/faults', { mutate_active_hold_price: 1150 });
+      appendChat('assistant', '⚡ [Fault Injected] Active hold quoted_price mutated in DB to ₹1,150 after quote. Try clicking "✅ Confirm Action" to watch the code-level approval gate catch the mismatch!');
+      renderSnapshot(res.snapshot);
+    }
+
+    async function triggerProactiveCancel() {
+      const res = await api('/api/proactive-cancel', {});
+      if (res.error) {
+        appendChat('assistant', '⚠️ ' + res.error);
+        return;
+      }
+      if (res.turn) {
+        appendChat('assistant', res.turn.reply);
+      }
+      renderSnapshot(res.snapshot, res.turn);
+    }
+
+    async function resetDemo() {
+      const res = await api('/api/reset', {});
+      document.getElementById('chatLog').innerHTML =
+        '<div class="msg assistant">Session reset! 55 memories re-seeded and past electrician booking restored.</div>';
+      renderSnapshot(res.snapshot);
+    }
+
+    api('/api/state').then(s => renderSnapshot(s));
+  </script>
+</body>
+</html>

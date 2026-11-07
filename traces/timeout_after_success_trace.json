@@ -4,20 +4,20 @@
   "user_id": "user_01",
   "final_outcome": "booking_confirmed_after_timeout_check",
   "final_booking": {
-    "booking_id": "bk_95d546da76",
+    "booking_id": "bk_e7d14fecf1",
     "user_id": "user_01",
     "provider_id": "prov_plumb_01",
     "provider_name": "Rameshwar Plumbing & Leak Experts",
     "service": "plumber",
     "slot": "2026-11-09T11:00",
     "price": 850,
-    "hold_id": "hold_2d35a3e486",
-    "idempotency_key": "idem_dc42ce16877edc2c776102d1",
+    "hold_id": "hold_fc871f3e6a",
+    "idempotency_key": "idem_0607bab9840ae6ad6f67ee29",
     "booking_status": "confirmed"
   },
   "trace_events": [
     {
-      "trace_id": "trc_954a95da9c39",
+      "trace_id": "trc_8481ba110310",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 1,
@@ -114,7 +114,7 @@
       }
     },
     {
-      "trace_id": "trc_74d1ec2d2715",
+      "trace_id": "trc_579900b866d8",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 1,
@@ -129,7 +129,7 @@
       }
     },
     {
-      "trace_id": "trc_ffc2d7bc4540",
+      "trace_id": "trc_f9abf995b91c",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 1,
@@ -245,7 +245,7 @@
       }
     },
     {
-      "trace_id": "trc_c1cfa950d3b1",
+      "trace_id": "trc_2e26d813b048",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 1,
@@ -306,7 +306,7 @@
       }
     },
     {
-      "trace_id": "trc_ae7b1a3adfd1",
+      "trace_id": "trc_069b3c015356",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 1,
@@ -322,7 +322,7 @@
         "kwargs": {},
         "result": {
           "status": "ok",
-          "hold_id": "hold_2d35a3e486",
+          "hold_id": "hold_fc871f3e6a",
           "provider_id": "prov_plumb_01",
           "provider_name": "Rameshwar Plumbing & Leak Experts",
           "slot": "2026-11-09T11:00",
@@ -337,7 +337,7 @@
       }
     },
     {
-      "trace_id": "trc_9e9f774a478a",
+      "trace_id": "trc_070736aeef1d",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 2,
@@ -434,7 +434,7 @@
       }
     },
     {
-      "trace_id": "trc_2becfde40688",
+      "trace_id": "trc_1329c3ee81fc",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 2,
@@ -449,7 +449,7 @@
       }
     },
     {
-      "trace_id": "trc_b347b5c37133",
+      "trace_id": "trc_6fb48153d91d",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 2,
@@ -458,8 +458,8 @@
       "payload": {
         "tool": "book",
         "args": [
-          "hold_2d35a3e486",
-          "idem_dc42ce16877edc2c776102d1",
+          "hold_fc871f3e6a",
+          "idem_0607bab9840ae6ad6f67ee29",
           "user_01",
           true
         ],
@@ -467,8 +467,8 @@
         "result": {
           "status": "timeout",
           "error_code": "network_timeout",
-          "hold_id": "hold_2d35a3e486",
-          "idempotency_key": "idem_dc42ce16877edc2c776102d1",
+          "hold_id": "hold_fc871f3e6a",
+          "idempotency_key": "idem_0607bab9840ae6ad6f67ee29",
           "message": "Request timed out after 10000ms. Outcome is ambiguous; query get_booking_status."
         },
         "warnings": [],
@@ -476,7 +476,7 @@
       }
     },
     {
-      "trace_id": "trc_58a878ef49c2",
+      "trace_id": "trc_bd23a20243b9",
       "session_id": "sess_eval",
       "user_id": "user_01",
       "turn_index": 2,
@@ -485,21 +485,21 @@
       "payload": {
         "tool": "get_booking_status",
         "args": [
-          "idem_dc42ce16877edc2c776102d1"
+          "idem_0607bab9840ae6ad6f67ee29"
         ],
         "kwargs": {},
         "result": {
           "status": "booked",
           "booking": {
-            "booking_id": "bk_95d546da76",
+            "booking_id": "bk_e7d14fecf1",
             "user_id": "user_01",
             "provider_id": "prov_plumb_01",
             "provider_name": "Rameshwar Plumbing & Leak Experts",
             "service": "plumber",
             "slot": "2026-11-09T11:00",
             "price": 850,
-            "hold_id": "hold_2d35a3e486",
-            "idempotency_key": "idem_dc42ce16877edc2c776102d1",
+            "hold_id": "hold_fc871f3e6a",
+            "idempotency_key": "idem_0607bab9840ae6ad6f67ee29",
             "booking_status": "confirmed"
           }
         },
