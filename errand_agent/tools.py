@@ -695,6 +695,16 @@ class ToolEnvironment:
         hold = self.store._conn.execute(
             "SELECT * FROM holds WHERE hold_id = ?", (key,)
         ).fetchone()
+        if not hold:
+            # Also resolve via action_journal if caller queried by pre-logged idempotency_key
+            j_row = self.store._conn.execute(
+                "SELECT hold_id FROM action_journal WHERE idempotency_key = ? AND hold_id IS NOT NULL",
+                (key,),
+            ).fetchone()
+            if j_row:
+                hold = self.store._conn.execute(
+                    "SELECT * FROM holds WHERE hold_id = ?", (j_row["hold_id"],)
+                ).fetchone()
         if hold:
             expired = self.store.now() > float(hold["expires_at"]) or hold["status"] == "expired"
             return {
