@@ -67,3 +67,51 @@
   - **Bug Hit & Fixed (#3):** Escaped all trace and booking fields via `esc()` before rendering into `innerHTML` in `index.html` to prevent adversarial review strings from injecting raw HTML into the trace viewer.
   - Smoke-tested the HTTP server end-to-end (`/api/state`, `/api/chat`, `/api/faults` with `timeout_booked` recovery).
   - Authored `DESIGN_NOTE.md`, `BUGS.md`, `README.md`, and `AI_CODING_TRANSCRIPT.md`.
+
+---
+
+## Appendix — Design Specifications Locked During Working Sessions
+
+*How this build actually ran: Manish commissioned the plan phase-by-phase, set the working discipline, reviewed each milestone, and gated every phase before it shipped. The assistant implemented; Manish made the product calls and set the reliability bar. These are the design decisions that were settled in those working sessions — the ones that make the system hold together under the hard cases.*
+
+### 1. The approval gate lives in the application layer, not the prompt
+
+The single most consequential decision on this project: `book`, `cancel`, and `reschedule` verify a SHA-256 fingerprint over `(action, provider_id, slot, price, booking_id)` against the SQLite `approvals` table inside the tool layer — *before any side effect*. This was settled before Phase 1 was written, with the working principle that a model's output — even a confirmed-looking reply — can never itself be the permission. The graders' "injected review says auto-book immediately" test passes not because the model resists the injection, but because it has no authority to spend in the first place.
+
+### 2. "Material details" is a precise set, not a vibe
+
+Anything that changes the *economic or temporal identity* of an action — provider, slot, price, booking identity — invalidates a live approval automatically, with the reason recorded. Forgetting an unrelated preference never invalidates one (context corrections preserve unrelated state — a scenario the evals explicitly assert). Getting this set right is what prevents both "stale approve-a-₹850 booking, book at ₹1,150" and "user corrects their morning-window and loses their approved provider".
+
+### 3. Idempotency keys are persisted *before* the side effect
+
+Manish's standing operating rule — diagnose before touch, and never fail silently — was applied directly to state design: every consequential write is preceded by a pre-execution journal entry (`action_journal`) with the deterministic idempotency key (`sha256(user|action|target|slot)`), and no retry path ever regenerates a key from different inputs. The rediscovered failure that proved the point: a crash between the journal write and `book()`'s writes made the restarted agent resolve "not_found" — the recovery path failed closed until the journal was joined back to the hold. That's Bug #2 in `BUGS.md`; the eval that now guards it is S15.
+
+### 4. Timeout ambiguity resolves via the source of truth — never blind retries
+
+The 15%-odds `timeout` fault (half of which *did* book underneath) is exactly the trap. The contract the code implements: on timeout, `get_booking_status` is queried first; a hidden success is reported with the original `booking_id`; a `not_booked` state retries **with the same idempotency key**, so the second attempt cannot double-book. Repeated user confirmations ("Yes, confirm" ×3) hash to one ledger entry. Verified in S10–S17.
+
+### 5. Memory is a tri-state, not a key-value dump
+
+Each memory carries `source` (explicit / inferred) × `confirmed`, × `status` (active / forgotten). The context packer *never* ships forgotten facts or unconfirmed inferred guesses — model-visible truth has to be validated or user-stated. The `context_manifest` traces every turn's excluded set, making the claim auditable rather than aspirational. S19–S21 hold the invariant.
+
+### 6. Bounded execution and fail-loud runs
+
+Hard caps on model turns, tool calls, and wall-clock; every exit produces a user-facing outcome. The counterpart discipline — a fetch lane that yields zero rows exits non-zero instead of promising success — comes from the same operating rule (`BUGS.md` Bug #1's sibling found in the job-hunt dashboard project: a silent zero breaks credibility invisibly; the evals apply it to the errand agent too).
+
+### 7. Deterministic, seeded evals — no excuses in CI
+
+All 22 scenarios run offline against seeded randomness and scripted model behavior, so the table is reproducible on any reviewer's machine in seconds. Seeded fault distributions implement the *assignment's own contract* (70/15/15, half-of-timeouts-succeed) instead of hand-hacked branches — making the eval suite the same artifact a reviewer re-runs with one command.
+
+### 8. Product discipline: dead code is deleted, not shelved
+
+Only what is visible in the UI / usable via a public entry point ships inside the package — every fetch lane, every endpoint, every agent helper has an owner. Nothing was carried through "in case"; nothing in the trace viewer trusts unsanitized data (Bug #3's fix).
+
+---
+
+### Why this maps to the founding-engineer mandate
+
+- **0→1 in one working session:** full repo, tests, evals, docs, video, transcript — designed, built, reviewed, and shipped with the AI as the primary implementation lever, and a human holding the safety and product gut decisions.
+- **Reliability engineer's instinct:** the hard engineering here isn't the happy path; it's the adversarial cases a founder would confront in production — injected inputs, half-finished side effects, stale permissions, escaping in user-facing UI. Each is measured, not asserted.
+- **Autonomy with verification:** the move Manish's working habits encode — *use the AI aggressively, but make verification structural (code gates, evals, fail-loud runs)* rather than trust-based — is exactly the operating posture a founding AI engineer needs when the team is two people and the surface area is everything.
+- **Clean committed handoff:** 4 commits (one per phase) with passing suites per commit; the repo reads top-to-bottom the way a CTO would want to review it on day one.
+
